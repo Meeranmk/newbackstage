@@ -1,0 +1,86 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: sample-service-template
+  title: Sample Express Service Template
+  description: Creates a simple Express.js REST API service owned by Meeranmk
+  tags:
+    - express
+    - nodejs
+    - service
+
+spec:
+  owner: user:default/meeranmk
+  type: service
+
+  parameters:
+    - title: Service Details
+      required:
+        - name
+        - description
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Unique name of the service (e.g. my-api-service)
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          description: Short summary of what this service does
+          default: A sample REST API service created with Backstage
+        componentType:
+          title: Component Type
+          type: string
+          default: service
+          enum:
+            - service
+            - website
+            - library
+
+    - title: Choose Repository Location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base Content
+      action: fetch:template
+      input:
+        url: ./content
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          componentType: ${{ parameters.componentType }}
+          owner: user:default/meeranmk
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        description: ${{ parameters.description }}
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: 'main'
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
